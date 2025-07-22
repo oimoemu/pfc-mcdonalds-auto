@@ -1,0 +1,2 @@
+# pfc-mcdonalds-auto
+マクドナルド
