@@ -44,13 +44,12 @@ for table in soup.find_all("table", class_="allergy-info__table"):
         })
 
 df = pd.DataFrame(menu_list)
-# ▼カラム名リネーム＆出力列を並び替え
 df = df.rename(columns={
     "チェーン名": "店舗名",
     "たんぱく質": "たんぱく質 (g)",
     "脂質": "脂質 (g)",
     "炭水化物": "炭水化物 (g)"
 })
-df = df[["店舗名", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
+df = df[["店舗名", "カテゴリ", "メニュー名", "カロリー", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
 df.to_csv("menu_data_all_chains.csv", index=False)
-print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！（表題も変更）")
+print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！（列・表題も変更）")
