@@ -10,16 +10,15 @@ URL = "https://www.mcdonalds.co.jp/quality/allergy_Nutrition/nutrient/"
 CHAIN_NAME = "マクドナルド"
 
 options = Options()
-options.add_argument('--headless')  # GitHub Actions等の自動化時はONが安全
+options.add_argument('--headless')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 options.add_argument('--lang=ja-JP')
 options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
-# ★「user-data-dir」関連は指定しない！エラー回避のため
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 driver.get(URL)
-time.sleep(8)  # 必要なら増減（8秒あればほぼ安全）
+time.sleep(8)
 
 html = driver.page_source
 driver.quit()
@@ -27,8 +26,6 @@ driver.quit()
 soup = BeautifulSoup(html, "lxml")
 
 menu_list = []
-
-# マクドナルドの本命テーブルのみをパース
 for table in soup.find_all("table", class_="allergy-info__table"):
     for row in table.select("tbody > tr"):
         tds = row.find_all("td")
@@ -47,5 +44,13 @@ for table in soup.find_all("table", class_="allergy-info__table"):
         })
 
 df = pd.DataFrame(menu_list)
+# ▼カラム名リネーム＆出力列を並び替え
+df = df.rename(columns={
+    "チェーン名": "店舗名",
+    "たんぱく質": "たんぱく質 (g)",
+    "脂質": "脂質 (g)",
+    "炭水化物": "炭水化物 (g)"
+})
+df = df[["店舗名", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
 df.to_csv("menu_data_all_chains.csv", index=False)
-print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！")
+print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！（表題も変更）")
