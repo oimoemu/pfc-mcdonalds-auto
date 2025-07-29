@@ -5,20 +5,25 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
+import tempfile  # ← 追加！
 
 URL = "https://www.mcdonalds.co.jp/quality/allergy_Nutrition/nutrient/"
 CHAIN_NAME = "マクドナルド"
 
 options = Options()
-# options.add_argument('--headless')  # デバッグ時はウィンドウ表示を推奨
+# options.add_argument('--headless')  # 必要に応じて有効化（CI環境ではON推奨）
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 options.add_argument('--lang=ja-JP')
 options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
 
+# ↓ 一時的なuser-data-dirで競合を完全防止
+user_data_dir = tempfile.mkdtemp()
+options.add_argument(f'--user-data-dir={user_data_dir}')
+
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 driver.get(URL)
-time.sleep(8)
+time.sleep(8)  # ネットワーク速度次第で調整
 
 html = driver.page_source
 driver.quit()
@@ -34,7 +39,6 @@ for table in soup.find_all("table", class_="allergy-info__table"):
         tds = row.find_all("td")
         if len(tds) < 5:
             continue
-        # 商品名はaタグ内テキスト
         menu_name = tds[0].get_text(strip=True)
         category = row.get("data-kind", "未分類")
         menu_list.append({
