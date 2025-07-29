@@ -5,25 +5,21 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
-import tempfile  # ← 追加！
 
 URL = "https://www.mcdonalds.co.jp/quality/allergy_Nutrition/nutrient/"
 CHAIN_NAME = "マクドナルド"
 
 options = Options()
-# options.add_argument('--headless')  # 必要に応じて有効化（CI環境ではON推奨）
+options.add_argument('--headless')  # GitHub Actions等の自動化時はONが安全
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
 options.add_argument('--lang=ja-JP')
 options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
-
-# ↓ 一時的なuser-data-dirで競合を完全防止
-user_data_dir = tempfile.mkdtemp()
-options.add_argument(f'--user-data-dir={user_data_dir}')
+# ★「user-data-dir」関連は指定しない！エラー回避のため
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 driver.get(URL)
-time.sleep(8)  # ネットワーク速度次第で調整
+time.sleep(8)  # 必要なら増減（8秒あればほぼ安全）
 
 html = driver.page_source
 driver.quit()
@@ -32,9 +28,8 @@ soup = BeautifulSoup(html, "lxml")
 
 menu_list = []
 
-# 本命テーブルだけ抽出
+# マクドナルドの本命テーブルのみをパース
 for table in soup.find_all("table", class_="allergy-info__table"):
-    # tbody内のデータ行のみ抽出
     for row in table.select("tbody > tr"):
         tds = row.find_all("td")
         if len(tds) < 5:
