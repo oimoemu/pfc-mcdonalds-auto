@@ -51,5 +51,8 @@ df = df.rename(columns={
     "炭水化物": "炭水化物 (g)"
 })
 df = df[["店舗名", "カテゴリ", "メニュー名", "カロリー", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
+
+df = df.drop_duplicates()
+
 df.to_csv("menu_data_all_chains.csv", index=False)
-print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！（列・表題も変更）")
+print("menu_data_all_chains.csv をマクドナルドの最新PFC情報で更新しました！（重複も自動で除去）")
