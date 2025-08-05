@@ -1,3 +1,4 @@
+from scrape_cocos import scrape_cocos
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -42,6 +43,15 @@ for table in soup.find_all("table", class_="allergy-info__table"):
             "脂質": tds[3].get_text(strip=True),
             "炭水化物": tds[4].get_text(strip=True)
         })
+
+all_menus = []
+all_menus += scrape_mcdonalds()  # マクドナルドのデータ
+all_menus += scrape_cocos()      # ココスのデータ
+# 他にも他チェーンが増えたらここでどんどん追加OK！
+
+# (2) pandasでまとめてデータフレーム化
+import pandas as pd
+df = pd.DataFrame(all_menus)
 
 df = pd.DataFrame(menu_list)
 df = df.rename(columns={
