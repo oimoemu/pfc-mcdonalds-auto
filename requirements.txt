@@ -1,5 +1,8 @@
 selenium
 webdriver-manager
-pandas
 beautifulsoup4
 lxml
+pandas
+requests
+pdfplumber
+
