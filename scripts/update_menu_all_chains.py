@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 
+def scrape_mcdonalds():
 URL = "https://www.mcdonalds.co.jp/quality/allergy_Nutrition/nutrient/"
 CHAIN_NAME = "マクドナルド"
 
@@ -43,7 +44,10 @@ for table in soup.find_all("table", class_="allergy-info__table"):
             "脂質": tds[3].get_text(strip=True),
             "炭水化物": tds[4].get_text(strip=True)
         })
+    return menu_list
 
+# --- ここからがmain実行部分 ---
+if __name__ == "__main__":
 all_menus = []
 all_menus += scrape_mcdonalds()  # マクドナルドのデータ
 all_menus += scrape_cocos()      # ココスのデータ
