@@ -1,7 +1,22 @@
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 import time
+
+def parse_cocos_pfc(soup):
+    pfc = {}
+    nutrient_ul = soup.find("ul", class_="nutrient_list")
+    if not nutrient_ul:
+        return None
+    for li in nutrient_ul.find_all("li"):
+        name = li.find("span").get_text(strip=True)
+        value = li.get_text(strip=True).replace(name, "").strip()
+        pfc[name] = value
+    return {
+        "カロリー": pfc.get("エネルギー", ""),
+        "たんぱく質": pfc.get("たんぱく質", ""),
+        "脂質": pfc.get("脂質", ""),
+        "炭水化物": pfc.get("炭水化物", "")
+    }
 
 def scrape_cocos():
     CHAIN_NAME = "ココス"
@@ -9,34 +24,45 @@ def scrape_cocos():
     LIST_URL = "https://www.cocos-jpn.co.jp/tabel/"
     menu_list = []
 
-    # 1. メニュー一覧ページから全商品URLを取得
+    # 一覧ページのHTMLを取得
     res = requests.get(LIST_URL)
     soup = BeautifulSoup(res.content, "lxml")
-    # 商品ごとの<a>タグを全て取得（構造に応じてクラス名や属性を調整してください）
-    menu_links = soup.select('a.c-tabelList__item')  # ← 例。正しいセレクタは要調査
 
-    for link in menu_links:
-        menu_url = BASE_URL + link.get("href")
-        menu_name = link.get_text(strip=True)  # 例。必要なら構造によって取得方法修正
-        print(menu_name, menu_url)
-        # 2. 各商品ページでPFCを取得
-        r = requests.get(menu_url)
-        s = BeautifulSoup(r.content, "lxml")
-        # ↓ページ内のカロリー等の値を正しいセレクタで抜き出す
-        kcal = s.select_one('.c-nutrition__energy').get_text(strip=True)
-        p = s.select_one('.c-nutrition__protein').get_text(strip=True)
-        f = s.select_one('.c-nutrition__fat').get_text(strip=True)
-        c = s.select_one('.c-nutrition__carbohydrate').get_text(strip=True)
+    # 商品ページへのリンクを全取得（hrefが/menu/〜.htmlのaタグ）
+    links = soup.find_all("a", href=True)
+    menu_links = []
+    for a in links:
+        href = a['href']
+        if href.startswith('/menu/') and href.endswith('.html'):
+            menu_links.append(BASE_URL + href)
 
-        menu_list.append({
-            "チェーン名": CHAIN_NAME,
-            "カテゴリ": "",  # カテゴリ情報を別途取得できれば追加
-            "メニュー名": menu_name,
-            "カロリー": kcal,
-            "たんぱく質": p,
-            "脂質": f,
-            "炭水化物": c
-        })
-        time.sleep(0.5)  # サーバー負荷対策（マナーとして0.5秒スリープ）
+    for url in menu_links:
+        try:
+            page = requests.get(url)
+            s = BeautifulSoup(page.content, "lxml")
+            pfc = parse_cocos_pfc(s)
+            if not pfc:
+                continue
 
+            # メニュー名取得
+            menu_name = s.select_one("p.menuName span")
+            menu_name = menu_name.get_text(strip=True) if menu_name else ""
+            # カテゴリ取得
+            category = s.select_one("p.category span")
+            category = category.get_text(strip=True) if category else ""
+
+            menu_list.append({
+                "チェーン名": CHAIN_NAME,
+                "カテゴリ": category,
+                "メニュー名": menu_name,
+                "カロリー": pfc["カロリー"],
+                "たんぱく質": pfc["たんぱく質"],
+                "脂質": pfc["脂質"],
+                "炭水化物": pfc["炭水化物"]
+            })
+            time.sleep(0.5)  # サーバー負荷対策
+        except Exception as e:
+            print(f"エラー: {url} {e}")
+
+    print(f"ココスメニュー抽出件数: {len(menu_list)}")
     return menu_list
