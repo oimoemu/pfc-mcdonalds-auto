@@ -24,11 +24,8 @@ def scrape_cocos():
     LIST_URL = "https://www.cocos-jpn.co.jp/tabel/"
     menu_list = []
 
-    # 一覧ページのHTMLを取得
     res = requests.get(LIST_URL)
     soup = BeautifulSoup(res.content, "lxml")
-
-    # 商品ページへのリンクを全取得（hrefが/menu/〜.htmlのaタグ）
     links = soup.find_all("a", href=True)
     menu_links = []
     for a in links:
@@ -44,10 +41,10 @@ def scrape_cocos():
             if not pfc:
                 continue
 
-            # メニュー名取得
-            menu_name = s.select_one("p.menuName span")
+            # ★商品名はh2.menu_ttlで取得！
+            menu_name = s.select_one("h2.menu_ttl")
             menu_name = menu_name.get_text(strip=True) if menu_name else ""
-            # カテゴリ取得
+            # カテゴリはp.category spanで（なければ空欄）
             category = s.select_one("p.category span")
             category = category.get_text(strip=True) if category else ""
 
@@ -60,7 +57,7 @@ def scrape_cocos():
                 "脂質": pfc["脂質"],
                 "炭水化物": pfc["炭水化物"]
             })
-            time.sleep(0.5)  # サーバー負荷対策
+            time.sleep(0.5)
         except Exception as e:
             print(f"エラー: {url} {e}")
 
