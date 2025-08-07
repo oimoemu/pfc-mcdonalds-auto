@@ -41,18 +41,27 @@ def scrape_cocos():
             if not pfc:
                 continue
 
-            # ★商品名はh2.menu_ttlで取得！
+            # 商品名
             menu_name = s.select_one("h2.menu_ttl")
             menu_name = menu_name.get_text(strip=True) if menu_name else ""
-            # カテゴリはp.category spanで（なければ空欄）
-            category = s.select_one("p.category span")
+
+            # ▼カテゴリ：h1タグのテキストを使う
+            category = s.select_one("h1")
             category = category.get_text(strip=True) if category else ""
+
+            # ▼カロリー：数値のみ（「350kcal」→「350」など）
+            kcal = pfc["カロリー"]
+            kcal_num = ""
+            if kcal:
+                m = re.search(r"(\d+)", kcal)
+                if m:
+                    kcal_num = m.group(1)
 
             menu_list.append({
                 "チェーン名": CHAIN_NAME,
                 "カテゴリ": category,
                 "メニュー名": menu_name,
-                "カロリー": pfc["カロリー"],
+                "カロリー": kcal_num,
                 "たんぱく質": pfc["たんぱく質"],
                 "脂質": pfc["脂質"],
                 "炭水化物": pfc["炭水化物"]
