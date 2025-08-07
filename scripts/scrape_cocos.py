@@ -18,6 +18,8 @@ def parse_cocos_pfc(soup):
         "炭水化物": pfc.get("炭水化物", "")
     }
 
+import re
+
 def scrape_cocos():
     CHAIN_NAME = "ココス"
     BASE_URL = "https://www.cocos-jpn.co.jp"
