@@ -24,10 +24,14 @@ import re
 _Z2H = str.maketrans("０１２３４５６７８９．，", "0123456789..")
 
 def num_only(s: str) -> str:
-    """文字列から最初に出現する数値（整数/小数）だけを取り出して返す。なければ空文字。"""
+    """文字列から整数・小数の数値だけを抽出（カンマあり千区切りにも対応）"""
     if not s:
         return ""
-    t = str(s).translate(_Z2H)  # 全角→半角 & 全角ドット→半角
+    # 全角→半角変換（数字・小数点・カンマ）
+    t = str(s).translate(str.maketrans("０１２３４５６７８９．，", "0123456789.."))
+    # 千区切りカンマを削除
+    t = t.replace(",", "")
+    # 数値（整数 or 小数）を抽出
     m = re.search(r"\d+(?:\.\d+)?", t)
     return m.group(0) if m else ""
 
