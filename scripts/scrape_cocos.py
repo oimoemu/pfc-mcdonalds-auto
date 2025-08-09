@@ -20,6 +20,17 @@ def parse_cocos_pfc(soup):
 
 import re
 
+# 全角→半角の簡易変換（数字と小数点だけ）
+_Z2H = str.maketrans("０１２３４５６７８９．，", "0123456789..")
+
+def num_only(s: str) -> str:
+    """文字列から最初に出現する数値（整数/小数）だけを取り出して返す。なければ空文字。"""
+    if not s:
+        return ""
+    t = str(s).translate(_Z2H)  # 全角→半角 & 全角ドット→半角
+    m = re.search(r"\d+(?:\.\d+)?", t)
+    return m.group(0) if m else ""
+
 def scrape_cocos():
     CHAIN_NAME = "ココス"
     BASE_URL = "https://www.cocos-jpn.co.jp"
@@ -43,32 +54,30 @@ def scrape_cocos():
             if not pfc:
                 continue
 
-            # 商品名
             menu_name = s.select_one("h2.menu_ttl")
             menu_name = menu_name.get_text(strip=True) if menu_name else ""
 
-            # ▼カテゴリ：h1タグのテキストを使う
+            # カテゴリはページ上部の <h1>
             category = s.select_one("h1")
             category = category.get_text(strip=True) if category else ""
 
-            # ▼カロリー：数値のみ（「350kcal」→「350」など）
-            kcal = pfc["カロリー"]
-            kcal_num = ""
-            if kcal:
-                m = re.search(r"(\d+)", kcal)
-                if m:
-                    kcal_num = m.group(1)
+            # ▼数値だけに統一
+            kcal = num_only(pfc.get("カロリー", ""))           # 例 "350"
+            protein = num_only(pfc.get("たんぱく質", ""))      # 例 "19.8"
+            fat = num_only(pfc.get("脂質", ""))               # 例 "22.5"
+            carb = num_only(pfc.get("炭水化物", ""))          # 例 "14.7"
 
             menu_list.append({
                 "チェーン名": CHAIN_NAME,
                 "カテゴリ": category,
                 "メニュー名": menu_name,
-                "カロリー": kcal_num,
-                "たんぱく質": pfc["たんぱく質"],
-                "脂質": pfc["脂質"],
-                "炭水化物": pfc["炭水化物"]
+                "カロリー": kcal,
+                "たんぱく質": protein,
+                "脂質": fat,
+                "炭水化物": carb,
             })
             time.sleep(0.5)
+
         except Exception as e:
             print(f"エラー: {url} {e}")
 
