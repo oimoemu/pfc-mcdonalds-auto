@@ -1,4 +1,5 @@
-from scrape_cocos import scrape_cocos  # ← ココス用（別ファイルで定義してある場合のみ必要）
+from scrape_cocos import scrape_cocos# ← ココス用（別ファイルで定義してある場合のみ必要）
+from scrape_cocos import scrape_bikkuri_donkey_nutrition
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     all_menus = []
     all_menus += scrape_mcdonalds()   # マクドナルドのデータ
     all_menus += scrape_cocos()       # ココスのデータ（importできていれば）
+    all_menus += scrape_bikkuri_donkey_nutrition()
 
     df = pd.DataFrame(all_menus)
     df = df.rename(columns={
@@ -61,4 +63,4 @@ if __name__ == "__main__":
     df = df[["店舗名", "カテゴリ", "メニュー名", "カロリー", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
     df = df.drop_duplicates()
     df.to_csv("menu_data_all_chains.csv", index=False)
-    print("menu_data_all_chains.csv をマクドナルド＋ココスの最新PFC情報で更新しました！（重複も自動で除去）")
+    print("menu_data_all_chains.csv をマクドナルド＋ココス＋びっくりドンキーの最新PFC情報で更新しました！（重複も自動で除去）")
