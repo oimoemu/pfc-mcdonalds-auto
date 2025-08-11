@@ -23,18 +23,54 @@ BTN_TEXT = "栄養成分情報を見る"  # クリック対象
 
 # --- ここだけ差分適用でOK ---
 
+from selenium.webdriver.chrome.service import Service
+
 def make_driver(headless: bool = True):
-    opts = Options()
+    """
+    GitHub Actions 上で Chrome が無いエラーを回避するため、
+    インストール済みの Chromium / Chrome を自動検出して Selenium に渡す。
+    ローカルでもそのまま動作するよう、複数パスを順に探索します。
+    """
+    opts = webdriver.ChromeOptions()
+
+    # ヘッドレス設定（Selenium 4系は --headless=new が安定）
     if headless:
-        # 新旧 headless 両対応
-        for flag in ["--headless=new", "--headless"]:
-            opts.add_argument(flag)
+        opts.add_argument("--headless=new")
+
+    # CI/コンテナで安定動作させる定番フラグ
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--window-size=1280,2000")
-    # UA を固定して分岐を避ける
-    opts.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome Safari")
-    return webdriver.Chrome(options=opts)
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--remote-debugging-port=9222")
+
+    # ブラウザ実行ファイルを候補順に探索
+    candidates = [
+        # GitHub Actions の browser-actions/setup-chrome などが設定することがある
+        os.environ.get("CHROME_BIN") or os.environ.get("CHROME_PATH"),
+        # 一般的な Google Chrome
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        # Ubuntu の Chromium（GitHub Actions の apt だとこちら）
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+        # macOS 開発環境の例（ローカル想定）
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            opts.binary_location = path
+            break
+
+    # chromedriver の場所を指定（apt の chromium-driver を使う場合にマッチ）
+    service = None
+    for drv in ("/usr/bin/chromedriver", "/snap/bin/chromedriver"):
+        if os.path.exists(drv):
+            service = Service(drv)
+            break
+    # 上記が無ければ Selenium Manager に任せる（service=None のまま）
+
+    return webdriver.Chrome(options=opts, service=service)
 
 def click_nutrition_button(driver) -> bool:
     driver.get(BASE)
