@@ -1,5 +1,5 @@
 from scrape_cocos import scrape_cocos# ← ココス用（別ファイルで定義してある場合のみ必要）
-from scrape_cocos import scrape_bikkuri_donkey_nutrition
+from scrape_bikkuri_donkey_nutrition import scrape_bikkuri_donkey_nutrition
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
