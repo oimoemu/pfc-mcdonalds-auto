@@ -2,8 +2,8 @@ name: Auto update menu_data_all_chains.csv
 
 on:
   schedule:
-    - cron:  '0 18 * * 0'   # JSTで毎週月曜午前3時（GitHubはUTC、+9h）
-  workflow_dispatch:        # 手動実行ボタン
+    - cron: '0 18 * * 0'  # UTC18:00=JST翌日3:00、毎週月曜 03:00(JST)
+  workflow_dispatch:
 
 jobs:
   update-menu:
@@ -21,34 +21,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ★ Chrome を入れる（outputs に chrome-path が入る）
+      # Chrome 本体のみを導入（chromedriverは入れない）
       - name: Install Google Chrome
         id: chrome
         uses: browser-actions/setup-chrome@v1
 
-      # ★ outputs を環境変数へ流し込む（ここが重要）
+      # setup-chrome の出力を環境変数へ
       - name: Export CHROME_PATH env
         run: |
           echo "CHROME_PATH=${{ steps.chrome.outputs.chrome-path }}" >> $GITHUB_ENV
           echo "CHROME_BIN=${{ steps.chrome.outputs.chrome-path }}" >> $GITHUB_ENV
 
-      # （任意）確認：明示パスでバージョン表示
+      # ★古いsystem chromedriverを除去（インデント修正済み）
+      - name: Remove system chromedriver
+        run: |
+          sudo apt-get remove -y chromium-chromedriver || true
+          sudo rm -f /usr/bin/chromedriver || true
+          which chromedriver && chromedriver --version || echo "no chromedriver in PATH"
+
       - name: Show Chrome version
         run: |
           echo "Chrome path: $CHROME_PATH"
-          "${{ steps.chrome.outputs.chrome-path }}" --version
+          "$CHROME_PATH" --version
 
       - name: Run update script
         run: python scripts/update_menu_all_chains.py
 
-
       - name: Commit and push if CSV changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add menu_data_all_chains.csv
           git diff --cached --quiet || git commit -m 'Auto update menu_data_all_chains.csv'
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
