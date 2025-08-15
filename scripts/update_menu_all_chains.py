@@ -1,66 +1,61 @@
-from scrape_cocos import scrape_cocos# ← ココス用（別ファイルで定義してある場合のみ必要）
-from scrape_bikkuri_donkey_nutrition import scrape_bikkuri_donkey_nutrition
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
-from bs4 import BeautifulSoup
+# scripts/update_menu_all_chains.py
+
 import pandas as pd
-import time
+# ここはあなたの構成に合わせて import
+from scrape_cocos import scrape_cocos        # ← これが list[dict] なら後で DataFrame 化します
+from scrape_bikkuri_donkey_nutrition import scrape_bikkuri_donkey_nutrition
+# from scrape_mcdonalds import scrape_mcdonalds など、チェーン別の関数も適宜
 
-def scrape_mcdonalds():
-    URL = "https://www.mcdonalds.co.jp/quality/allergy_Nutrition/nutrient/"
-    CHAIN_NAME = "マクドナルド"
+def main():
+    frames = []
 
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--lang=ja-JP')
-    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+    # 例：マクドナルド（関数が list[dict] を返すなら DataFrame にして append）
+    # mcd_list = scrape_mcdonalds()
+    # frames.append(pd.DataFrame(mcd_list))
 
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-    driver.get(URL)
-    time.sleep(8)
-    html = driver.page_source
-    driver.quit()
+    # 例：ココス（あなたの scrape_cocos が list[dict] なら DataFrame 化）
+    cocos_list = scrape_cocos()
+    frames.append(pd.DataFrame(cocos_list))
 
-    soup = BeautifulSoup(html, "lxml")
+    # びっくりドンキー（これは DataFrame を返す実装にしてある）
+    bd_df = scrape_bikkuri_donkey_nutrition(headless=True)
+    frames.append(bd_df)
 
-    menu_list = []
-    for table in soup.find_all("table", class_="allergy-info__table"):
-        for row in table.select("tbody > tr"):
-            tds = row.find_all("td")
-            if len(tds) < 5:
-                continue
-            menu_name = tds[0].get_text(strip=True)
-            category = row.get("data-kind", "未分類")
-            menu_list.append({
-                "チェーン名": CHAIN_NAME,
-                "カテゴリ": category,
-                "メニュー名": menu_name,
-                "カロリー": tds[1].get_text(strip=True),
-                "たんぱく質": tds[2].get_text(strip=True),
-                "脂質": tds[3].get_text(strip=True),
-                "炭水化物": tds[4].get_text(strip=True)
-            })
-    return menu_list
+    # すべて縦結合（列が合わなくても union される）
+    df_all = pd.concat(frames, ignore_index=True)
 
-# --- ここからがmain実行部分 ---
-if __name__ == "__main__":
-    all_menus = []
-    all_menus += scrape_mcdonalds()   # マクドナルドのデータ
-    all_menus += scrape_cocos()       # ココスのデータ（importできていれば）
-    all_menus += scrape_bikkuri_donkey_nutrition()
+    # 欲しい列の揃え（存在しない列は自動で NaN）
+    want_cols = ["店舗名","チェーン名","chain", "カテゴリ","category", "メニュー名","name",
+                 "カロリー","kcal", "たんぱく質","protein_g", "脂質","fat_g", "炭水化物","carb_g"]
+    keep = [c for c in want_cols if c in df_all.columns]
+    df_all = df_all[keep].copy()
 
-    df = pd.DataFrame(all_menus)
-    df = df.rename(columns={
+    # 列名を最終スキーマに寄せる
+    rename_map = {
+        "chain": "店舗名",
         "チェーン名": "店舗名",
-        "たんぱく質": "たんぱく質 (g)",
-        "脂質": "脂質 (g)",
-        "炭水化物": "炭水化物 (g)"
-    })
-    df = df[["店舗名", "カテゴリ", "メニュー名", "カロリー", "たんぱく質 (g)", "脂質 (g)", "炭水化物 (g)"]]
-    df = df.drop_duplicates()
-    df.to_csv("menu_data_all_chains.csv", index=False)
-    print("menu_data_all_chains.csv をマクドナルド＋ココス＋びっくりドンキーの最新PFC情報で更新しました！（重複も自動で除去）")
+        "category": "カテゴリ",
+        "name": "メニュー名",
+        "kcal": "カロリー",
+        "protein_g": "たんぱく質",
+        "fat_g": "脂質",
+        "carb_g": "炭水化物",
+    }
+    df_all.rename(columns=rename_map, inplace=True)
+
+    # 数値は文字が混じっていても数値化（できないものは NaN）
+    for col in ["カロリー","たんぱく質","脂質","炭水化物"]:
+        if col in df_all.columns:
+            df_all[col] = pd.to_numeric(df_all[col], errors="coerce")
+
+    # 重複排除（チェーン＋メニュー名＋数値で重複行を消す例）
+    subset_cols = [c for c in ["店舗名","メニュー名","カロリー","たんぱく質","脂質","炭水化物"] if c in df_all.columns]
+    if subset_cols:
+        df_all.drop_duplicates(subset=subset_cols, inplace=True)
+
+    # CSV 出力
+    df_all.to_csv("menu_data_all_chains.csv", index=False)
+    print("menu_data_all_chains.csv を更新しました:", len(df_all), "行")
+
+if __name__ == "__main__":
+    main()
