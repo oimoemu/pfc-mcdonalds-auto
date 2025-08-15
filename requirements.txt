@@ -5,4 +5,4 @@ lxml
 pandas
 requests
 pdfplumber
-
+selenium>=4.20
