@@ -13,6 +13,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service  # 使うが、指定はしない（Noneにする）
+
 
 import pdfplumber
 import requests
@@ -60,15 +62,12 @@ def make_driver(headless: bool = True):
     for path in candidates:
         if path and os.path.exists(path):
             opts.binary_location = path
+            print(f"[make_driver] Using browser: {path}")
             break
 
     # chromedriver の場所を指定（apt の chromium-driver を使う場合にマッチ）
     service = None
-    for drv in ("/usr/bin/chromedriver", "/snap/bin/chromedriver"):
-        if os.path.exists(drv):
-            service = Service(drv)
-            break
-    # 上記が無ければ Selenium Manager に任せる（service=None のまま）
+
 
     return webdriver.Chrome(options=opts, service=service)
 
