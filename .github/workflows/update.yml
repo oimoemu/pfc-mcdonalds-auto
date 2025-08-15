@@ -21,11 +21,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install ChromeDriver dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-driver chromium-browser
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
 
+      # （任意）確認用ログ
+      - run: |
+          echo "Chrome path: $CHROME_PATH"
+          "$CHROME_PATH" --version
       - name: Run update script
         run: python scripts/update_menu_all_chains.py
 
